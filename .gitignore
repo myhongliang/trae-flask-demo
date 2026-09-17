@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# 运行时数据
+data/*.csv
+
+# 系统/IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Trae / agent 缓存
+.trae/
