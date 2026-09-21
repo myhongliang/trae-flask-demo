@@ -72,6 +72,9 @@ class StorageService:
             raise RuntimeError("already recording")
         ts = time.strftime("%Y%m%d_%H%M%S")
         filename = name if name else f"record_{ts}.csv"
+        # 自定义名字若未带 .csv 后缀，补上，保证 list_records 等按后缀扫描的逻辑能命中
+        if not filename.endswith(".csv"):
+            filename = filename + ".csv"
         filepath = os.path.join(self.data_dir, filename)
         f = open(filepath, "w", newline="", encoding="utf-8")
         writer = csv.writer(f)

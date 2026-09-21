@@ -9,6 +9,9 @@ env/
 # 运行时数据
 data/*.csv
 
+# 日志
+*.log
+
 # 系统/IDE
 .DS_Store
 Thumbs.db
@@ -17,3 +20,6 @@ Thumbs.db
 
 # Trae / agent 缓存
 .trae/
+
+# 本地协作文档（不同步到仓库）
+GIT_WORKFLOW.md
