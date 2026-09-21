@@ -23,3 +23,13 @@ Thumbs.db
 
 # 本地协作文档（不同步到仓库）
 GIT_WORKFLOW.md
+
+# 上位机运行产物
+src/mac_pcq/ui/resources/i18n/*.qm
+*.pyc
+.pytest_cache/
+build/
+dist/
+
+# 旧 Flask 演示工程
+legacy/
