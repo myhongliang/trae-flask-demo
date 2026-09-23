@@ -20,13 +20,15 @@ from PySide6.QtCore import Qt, QPoint
 from PySide6.QtGui import QColor, QPainter, QBrush, QPen, QFont
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout, QPushButton,
-    QButtonGroup, QRadioButton, QDoubleSpinBox, QFrame, QMessageBox,
+    QButtonGroup, QRadioButton, QDoubleSpinBox, QFrame,
     QComboBox, QGroupBox, QFormLayout, QToolButton,
 )
 
 from ..widgets.matrix_grid import MatrixGrid
 from ..widgets.color_scale_bar import ColorScaleBar
 from .. import theme
+from ..widgets.toast import error as toast_error
+from ..widgets.modal import ConfirmDialog
 from ...domain.calibration import Calibration, CalibrationConfig
 from ...core.constants import RES_MAX_KOHM, RES_MIN_KOHM, PRESS_MIN_N, PRESS_MAX_N
 
@@ -103,9 +105,13 @@ class PageResistive(QWidget):
         self._channel_map: List[Tuple[int, int]] = [(i // 4, i % 4) for i in range(16)]
         self._display_format: str = "resistance"   # resistance / pressure
 
-        # ==== 标题 ====
-        title = QLabel("压阻矩阵")
-        title.setStyleSheet(f"color:{L['text_primary']};font-size:22px;font-weight:700;")
+        # ==== PageHeader ====
+        from ._stub import PageHeader
+        header = PageHeader(
+            "压阻矩阵",
+            "4×4 压阻传感器 · 通道互换 · 压力方程标定",
+            "matrix",
+        )
 
         # ==== 矩阵 + 色阶 ====
         self._matrix = _BigMatrix(
@@ -223,10 +229,11 @@ class PageResistive(QWidget):
 
         # ==== 整体布局 ====
         root = QVBoxLayout(self)
-        root.setContentsMargins(16, 16, 16, 16)
-        root.setSpacing(12)
+        root.setContentsMargins(24, 20, 24, 20)
+        root.setSpacing(16)
 
-        root.addWidget(title)
+        root.addWidget(header)
+        root.addWidget(header.divider())
         root.addLayout(format_row)
 
         # 矩阵 + 色阶 中央对齐
@@ -292,7 +299,7 @@ class PageResistive(QWidget):
         try:
             a, b = Calibration.calibrate_two_point(r1, p1, r2, p2)
         except ValueError as e:
-            QMessageBox.warning(self, "标定失败", f"两点标定失败：{e}")
+            toast_error(f"两点标定失败：{e}")
             return
         self._a2_sb.setValue(a)
         self._b_sb.setValue(b)
@@ -319,26 +326,24 @@ class PageResistive(QWidget):
             self._matrix.set_selected(None)
             self._hint_lbl.setText("提示：单击单元格选中 A，再单击另一格互换")
         else:
-            ret = QMessageBox.question(
-                self,
-                "确认互换",
+            ret = ConfirmDialog.ask(
+                self, "确认互换",
                 f"交换 通道 {sel + 1} ↔ 通道 {idx + 1}？",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                confirm_text="交换",
             )
-            if ret == QMessageBox.StandardButton.Yes:
+            if ret:
                 self._channel_map[sel], self._channel_map[idx] = self._channel_map[idx], self._channel_map[sel]
             self._matrix.set_selected(None)
             self._hint_lbl.setText("提示：单击单元格选中 A，再单击另一格互换")
             self._update_for_format()
 
     def _reset_mapping(self) -> None:
-        ret = QMessageBox.question(
-            self,
-            "恢复默认映射",
+        ret = ConfirmDialog.ask(
+            self, "恢复默认映射",
             "确认恢复默认（identity）映射？",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            confirm_text="恢复",
         )
-        if ret == QMessageBox.StandardButton.Yes:
+        if ret:
             self._channel_map = [(i // 4, i % 4) for i in range(16)]
             self._matrix.set_selected(None)
 

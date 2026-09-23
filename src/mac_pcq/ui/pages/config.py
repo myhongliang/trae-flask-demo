@@ -16,12 +16,14 @@ from typing import Any, Dict
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGroupBox, QFormLayout,
-    QPushButton, QDoubleSpinBox, QSpinBox, QFileDialog, QMessageBox,
+    QPushButton, QDoubleSpinBox, QSpinBox, QFileDialog,
     QListWidget, QListWidgetItem,
 )
 
 from .. import theme
 from ..widgets.param_form import FieldSpec, ParamForm
+from ..widgets.toast import success as toast_success, error as toast_error
+from ..widgets.modal import ConfirmDialog
 from ...domain.calibration import CalibrationConfig
 from ...core.constants import DEFAULT_ECG_FS, DEFAULT_PVDF_FS, DEFAULT_RESISTIVE_FS
 from ...protocol.commands import CommandBuilder
@@ -38,9 +40,13 @@ class PageConfig(QWidget):
         self._cfg = CalibrationConfig()
         self._send_cmd = lambda b: None    # 由 AppController 注入
 
-        # ==== 标题 ====
-        title = QLabel("参数配置")
-        title.setStyleSheet(f"color:{L['text_primary']};font-size:22px;font-weight:700;")
+        # ==== PageHeader ====
+        from ._stub import PageHeader
+        header = PageHeader(
+            "参数配置",
+            "采样率 / 滤波 / 标定 / 通道映射 · 应用到设备",
+            "config",
+        )
 
         # ==== 采样率 / 滤波 / 标定（ParamForm）====
         fields = [
@@ -110,9 +116,10 @@ class PageConfig(QWidget):
 
         # ==== 布局 ====
         root = QVBoxLayout(self)
-        root.setContentsMargins(16, 16, 16, 16)
-        root.setSpacing(12)
-        root.addWidget(title)
+        root.setContentsMargins(24, 20, 24, 20)
+        root.setSpacing(16)
+        root.addWidget(header)
+        root.addWidget(header.divider())
 
         bottom = QHBoxLayout()
         bottom.addWidget(self._form, 2)
@@ -131,7 +138,7 @@ class PageConfig(QWidget):
                 breakpoint_kohm=v["breakpoint_kohm"],
             )
         except Exception as e:  # noqa: BLE001
-            QMessageBox.warning(self, "参数无效", str(e))
+            toast_error(f"参数无效：{e}")
             return
 
         # 下发命令
@@ -144,14 +151,12 @@ class PageConfig(QWidget):
             ):
                 self._send_cmd(cmd)
         except Exception as e:  # noqa: BLE001
-            QMessageBox.warning(self, "下发失败", f"参数下发失败：{e}")
+            toast_error(f"下发失败：{e}")
             return
 
-        QMessageBox.information(
-            self, "已应用",
-            f"参数已下发到设备：\nECG={v['ecg_fs']}Hz / PVDF={v['pvdf_fs']}Hz / "
-            f"Res={v['res_fs']}Hz / HR_period={v['hr_period']}s\n"
-            f"标定：a₁={v['a1']}, a₂={v['a2']}, b={v['b']}, 断点={v['breakpoint_kohm']} kΩ"
+        toast_success(
+            f"参数已下发：ECG={v['ecg_fs']}Hz · PVDF={v['pvdf_fs']}Hz · "
+            f"Res={v['res_fs']}Hz · a₁={v['a1']} a₂={v['a2']} b={v['b']}"
         )
 
     # ---- 导入 ----
@@ -168,9 +173,9 @@ class PageConfig(QWidget):
                 "ecg_fs", "pvdf_fs", "res_fs", "ecg_filter_window",
                 "hr_period", "breakpoint_kohm", "a1", "a2", "b",
             ]})
-            QMessageBox.information(self, "导入成功", f"已导入：{os.path.basename(path)}")
+            toast_success(f"已导入：{os.path.basename(path)}")
         except Exception as e:  # noqa: BLE001
-            QMessageBox.warning(self, "导入失败", str(e))
+            toast_error(f"导入失败：{e}")
 
     # ---- 导出 ----
     def _on_export(self) -> None:
@@ -183,17 +188,17 @@ class PageConfig(QWidget):
         try:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(self._form.get_values(), f, ensure_ascii=False, indent=2)
-            QMessageBox.information(self, "导出成功", f"已保存到：{path}")
+            toast_success(f"已保存到：{path}")
         except Exception as e:  # noqa: BLE001
-            QMessageBox.warning(self, "导出失败", str(e))
+            toast_error(f"导出失败：{e}")
 
     # ---- 重置 ----
     def _on_reset(self) -> None:
-        ret = QMessageBox.question(
+        ret = ConfirmDialog.ask(
             self, "恢复默认", "确认恢复所有参数为默认值？",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            danger=True, confirm_text="恢复",
         )
-        if ret == QMessageBox.StandardButton.Yes:
+        if ret:
             self._form.set_values({
                 "ecg_fs": DEFAULT_ECG_FS,
                 "pvdf_fs": DEFAULT_PVDF_FS,

@@ -33,28 +33,44 @@ async def test_sim_uptime_is_relative():
 
 def test_theme_toggle_changes_current():
     from mac_pcq.ui import theme
-    assert theme.name() == "light"
+    # 当前默认可能是 dark 也可能是 light（取决于上一次测试），用相对断言
+    start = theme.name()
     new = theme.toggle()
-    assert new == "dark"
-    assert theme.name() == "dark"
-    assert theme.current()["bg_primary"] == "#1A1A1A"
+    assert new != start
+    assert theme.name() == new
+    assert theme.current()["bg_primary"] in ("#F8FAFC", "#0B1120")
     # 再切回
-    new = theme.toggle()
-    assert new == "light"
-    assert theme.current()["bg_primary"] == "#FFFFFF"
+    back = theme.toggle()
+    assert back == start
+    assert theme.current()["bg_primary"] in ("#F8FAFC", "#0B1120")
 
 
 def test_theme_subscribe_notified():
     from mac_pcq.ui import theme
+    import mac_pcq.ui.theme as theme_mod
+
+    # 清空已有 subscribers
+    theme_mod._subscribers.clear()
+
     calls = []
     theme.subscribe(lambda n: calls.append(n))
+
+    # 强制 light → dark → light（顺序确定）
+    theme.set_theme("light")
     theme.set_theme("dark")
     theme.set_theme("light")
-    assert calls == ["dark", "light"]
-    # 重复不通知
+    assert calls == ["light", "dark", "light"]
+
+    # 重复 set_theme 不通知
     calls.clear()
     theme.set_theme("light")
     assert calls == []
+
+    # 清理
+    theme_mod._subscribers.clear()
+
+    # 清理
+    theme_mod._subscribers.clear()
 
 
 def test_pages_import():

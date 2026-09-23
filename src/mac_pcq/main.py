@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QApplication
 
 from .app import AppController
 from .ui.main_window import MainWindow
+from .ui.stylesheet import apply_global, restyle
 
 # 尝试引入 qasync；缺失则退化为纯 asyncio 模式（GUI 仍能起但事件循环无集成）
 try:
@@ -19,10 +20,12 @@ except ImportError:
 
 
 def main() -> int:
-    QApplication.setHighDpiScaleFactorRoundingPolicy(
-        QApplication.HighDpiScaleFactorRoundingPolicy.PassThrough
-    )
     app = QApplication(sys.argv)
+    # 注入全局 QSS（现代仪表盘风格，含 Design Token）
+    apply_global(app)
+    # 主题切换时同步重注
+    import mac_pcq.ui.theme as _theme
+    _theme.subscribe(lambda _n: restyle(app))
 
     if _HAS_QASYNC:
         loop = qasync.QEventLoop(app)

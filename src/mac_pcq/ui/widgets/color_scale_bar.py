@@ -1,4 +1,4 @@
-"""ColorScaleBar：色阶图例（参见 UI 设计 §6.2.3）。"""
+"""ColorScaleBar：色阶图例（参见《UI 设计》§6.2.3）。"""
 
 from __future__ import annotations
 
@@ -6,8 +6,7 @@ from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import QPainter, QColor, QLinearGradient, QBrush, QFont
 from PySide6.QtWidgets import QWidget
 
-from .matrix_grid import _interpolate
-from mac_pcq.ui import theme
+from .. import theme
 
 
 class ColorScaleBar(QWidget):
@@ -17,7 +16,7 @@ class ColorScaleBar(QWidget):
         self.vmin = vmin
         self.vmax = vmax
         self.unit = unit
-        self.setFixedHeight(24)
+        self.setFixedHeight(40)
 
     def set_range(self, vmin: float, vmax: float) -> None:
         self.vmin = vmin
@@ -30,24 +29,30 @@ class ColorScaleBar(QWidget):
 
     def paintEvent(self, _evt) -> None:
         p = QPainter(self)
-        r = QRectF(0, 4, self.width() - 80, 16)
+        L = theme.current()
+        bar_rect = QRectF(0, 12, self.width() - 100, 16)
         stops = theme.COLOR_BASES.get(self.base, theme.COLOR_BASES["blue_red"])
-        grad = QLinearGradient(r.left(), 0, r.right(), 0)
+        grad = QLinearGradient(bar_rect.left(), 0, bar_rect.right(), 0)
         n = len(stops)
         for i, c in enumerate(stops):
             grad.setColorAt(i / max(1, n - 1), QColor(c))
-        p.fillRect(r, QBrush(grad))
-        L = theme.current()
+        p.fillRect(bar_rect, QBrush(grad))
+        # 边框
         p.setPen(QColor(L["border_default"]))
-        p.drawRect(r)
+        p.drawRect(bar_rect)
+        # 端点标记
+        p.setBrush(QColor(stops[0]))
+        p.drawEllipse(bar_rect.left() - 4, bar_rect.center().y() - 4, 8, 8)
+        p.setBrush(QColor(stops[-1]))
+        p.drawEllipse(bar_rect.right() - 4, bar_rect.center().y() - 4, 8, 8)
 
+        # 数字标签
         f = QFont()
-        f.setPixelSize(11)
+        f.setPixelSize(theme.FONT_SIZE["small"])
+        f.setFamily(theme.FONT_STACK["mono"])
         p.setFont(f)
         p.setPen(QColor(L["text_secondary"]))
-        p.drawText(self.width() - 76, 6, f"{self.vmax:.0f} {self.unit}")
-        p.drawText(self.width() - 76, 18, f"{self.vmin:.0f} {self.unit}")
+        p.drawText(self.width() - 92, 14, f"{self.vmax:.0f}")
+        p.drawText(self.width() - 92, 30, f"{self.vmin:.0f}")
+        p.drawText(self.width() - 60, 22, self.unit)
         p.end()
-
-    def restyle(self) -> None:
-        self.update()

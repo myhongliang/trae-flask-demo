@@ -1,118 +1,191 @@
-"""VitalCard：心率 / 呼吸率大字卡片（参见 UI 设计 §6.1.4）。"""
+"""VitalCard：心率 / 呼吸率大字卡片（参见《UI 设计》§6.1.4）。
+
+- HR / RR 用 --font-display 28px + Roboto Mono
+- 呼吸式动画提示（pulse）
+- 卡片背景渐变 + 阴影
+"""
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from typing import Optional
+
+from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
+from PySide6.QtGui import QPainter, QColor, QLinearGradient, QBrush, QFont
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
 
-from mac_pcq.ui import theme
+from .. import theme
+from .icon import get_pixmap
 
 
 class VitalCard(QWidget):
-    """显示 HR / RR / 电量 / 运行时长。"""
-
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        L = theme.current()
-        root = QVBoxLayout(self)
-        root.setContentsMargins(16, 12, 16, 12)
-        root.setSpacing(4)
+        self._pulse_anim: Optional[QPropertyAnimation] = None
+        self._build()
+        self._refresh()
+
+    def _build(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 16, 20, 16)
+        layout.setSpacing(10)
 
         # HR 行
         hr_row = QHBoxLayout()
-        self._hr_lbl = QLabel("HR  心率")
-        self._hr_lbl.setStyleSheet(f"color:{L['text_secondary']};font-size:12px;")
-        self._hr_val = QLabel("--")
-        self._hr_val.setStyleSheet(
-            f"color:{L['accent_danger']};font-family:Roboto Mono,monospace;"
-            f"font-size:28px;font-weight:700;"
-        )
-        self._hr_unit = QLabel("bpm")
-        self._hr_unit.setStyleSheet(f"color:{L['text_tertiary']};font-size:12px;")
-        self._hr_q = QLabel("--")
-        self._hr_q.setStyleSheet(f"color:{L['accent_success']};font-size:12px;")
+        hr_row.setSpacing(10)
+        self._hr_icon_lbl = QLabel()
+        self._hr_icon_lbl.setFixedSize(20, 20)
+        self._hr_lbl = QLabel("HR")
+        self._hr_lbl.setStyleSheet(self._lbl_style(theme.FONT_SIZE["small"], theme.FONT_WEIGHT["medium"]))
+        hr_row.addWidget(self._hr_icon_lbl)
         hr_row.addWidget(self._hr_lbl)
         hr_row.addStretch(1)
+        self._hr_val = QLabel("--")
+        self._hr_val.setStyleSheet(self._val_style(theme.FONT_SIZE["display"], theme.FONT_WEIGHT["bold"], "accent_danger"))
         hr_row.addWidget(self._hr_val)
+        self._hr_unit = QLabel("bpm")
+        self._hr_unit.setStyleSheet(self._lbl_style(theme.FONT_SIZE["small"], theme.FONT_WEIGHT["regular"]))
         hr_row.addWidget(self._hr_unit)
-        hr_row.addSpacing(8)
-        hr_row.addWidget(self._hr_q)
-        root.addLayout(hr_row)
+        layout.addLayout(hr_row)
 
         # RR 行
         rr_row = QHBoxLayout()
-        self._rr_lbl = QLabel("RR  呼吸率")
-        self._rr_lbl.setStyleSheet(f"color:{L['text_secondary']};font-size:12px;")
-        self._rr_val = QLabel("--")
-        self._rr_val.setStyleSheet(
-            f"color:{L['accent_info']};font-family:Roboto Mono,monospace;"
-            f"font-size:28px;font-weight:700;"
-        )
-        self._rr_unit = QLabel("bpm")
-        self._rr_unit.setStyleSheet(f"color:{L['text_tertiary']};font-size:12px;")
+        rr_row.setSpacing(10)
+        self._rr_icon_lbl = QLabel()
+        self._rr_icon_lbl.setFixedSize(20, 20)
+        self._rr_lbl = QLabel("RR")
+        self._rr_lbl.setStyleSheet(self._lbl_style(theme.FONT_SIZE["small"], theme.FONT_WEIGHT["medium"]))
+        rr_row.addWidget(self._rr_icon_lbl)
         rr_row.addWidget(self._rr_lbl)
         rr_row.addStretch(1)
+        self._rr_val = QLabel("--")
+        self._rr_val.setStyleSheet(self._val_style(theme.FONT_SIZE["display"], theme.FONT_WEIGHT["bold"], "accent_info"))
         rr_row.addWidget(self._rr_val)
+        self._rr_unit = QLabel("bpm")
+        self._rr_unit.setStyleSheet(self._lbl_style(theme.FONT_SIZE["small"], theme.FONT_WEIGHT["regular"]))
         rr_row.addWidget(self._rr_unit)
-        root.addLayout(rr_row)
+        layout.addLayout(rr_row)
 
-        # 底部状态
+        # 质量指示
+        self._q_lbl = QLabel("")
+        self._q_lbl.setStyleSheet(self._lbl_style(theme.FONT_SIZE["small"], theme.FONT_WEIGHT["medium"]))
+        layout.addWidget(self._q_lbl)
+
+        # 分隔
+        sep = QLabel()
+        sep.setFixedHeight(1)
+        sep.setStyleSheet(f"background:{theme.current()['border_default']};")
+        layout.addWidget(sep)
+
+        # 底部
         bot = QHBoxLayout()
-        self._bat_lbl = QLabel("电量: --%")
-        self._bat_lbl.setStyleSheet(f"color:{L['text_secondary']};font-size:12px;")
-        self._uptime_lbl = QLabel("运行时长: 00:00:00")
-        self._uptime_lbl.setStyleSheet(f"color:{L['text_secondary']};font-size:12px;")
+        bot.setSpacing(10)
+        self._bat_lbl = QLabel("电量 --%")
+        self._bat_lbl.setStyleSheet(self._lbl_style(theme.FONT_SIZE["small"], theme.FONT_WEIGHT["regular"]))
+        self._uptime_lbl = QLabel("运行时长 00:00:00")
+        self._uptime_lbl.setStyleSheet(self._lbl_style(theme.FONT_SIZE["small"], theme.FONT_WEIGHT["regular"]))
         bot.addWidget(self._bat_lbl)
         bot.addStretch(1)
         bot.addWidget(self._uptime_lbl)
-        root.addLayout(bot)
+        layout.addLayout(bot)
 
-        self._apply_theme()
+        self._build_pulse()
 
-    def _apply_theme(self) -> None:
+    def _build_pulse(self) -> None:
+        self._pulse_anim = QPropertyAnimation(self, b"pulse_opacity")
+        self._pulse_anim.setDuration(1200)
+        self._pulse_anim.setStartValue(0.6)
+        self._pulse_anim.setEndValue(1.0)
+        self._pulse_anim.setEasingCurve(QEasingCurve.Type.InOutSine)
+        self._pulse_anim.setLoopCount(-1)
+        self._pulse_anim.finished.connect(lambda: None)
+
+    def get_pulse_opacity(self) -> float:
+        return getattr(self, "_pulse_opacity", 1.0)
+
+    def set_pulse_opacity(self, v: float) -> None:
+        self._pulse_opacity = v
+        self.update()
+
+    pulse_opacity = property(get_pulse_opacity, set_pulse_opacity)
+
+    def _lbl_style(self, size: int, weight: int, color_key: str = "text_secondary") -> str:
         L = theme.current()
+        return (
+            f"color:{L[color_key]};font-size:{size}px;font-weight:{weight};"
+            f"background:transparent;border:0;"
+        )
+
+    def _val_style(self, size: int, weight: int, color_key: str) -> str:
+        L = theme.current()
+        return (
+            f"color:{L[color_key]};font-size:{size}px;font-weight:{weight};"
+            f"font-family:{theme.FONT_STACK['mono']};"
+            f"background:transparent;border:0;"
+        )
+
+    def _refresh(self) -> None:
+        # 图标
+        hr_pix = self._tinted_icon("heart")
+        rr_pix = self._tinted_icon("battery")  # 暂时用电池代表 RR（或新增 lung.svg）
+        self._hr_icon_lbl.setPixmap(hr_pix)
+        self._rr_icon_lbl.setPixmap(rr_pix)
+
+        # 背景渐变
+        L = theme.current()
+        bg_color = QColor(L["bg_secondary"])
         self.setStyleSheet(
-            f"background:{L['bg_secondary']};border:1px solid {L['border_default']};"
-            f"border-radius:8px;"
+            f"background:{bg_color.name()};"
+            f"border:1px solid {L['border_default']};"
+            f"border-radius:12px;"
         )
 
-    def restyle(self) -> None:
-        """主题切换时调用。"""
-        self._apply_theme()
-        # 子 label 重设
+    def _tinted_icon(self, name: str) -> "QPixmap":
+        from PySide6.QtGui import QPixmap
         L = theme.current()
-        self._hr_lbl.setStyleSheet(f"color:{L['text_secondary']};font-size:12px;")
-        self._hr_val.setStyleSheet(
-            f"color:{L['accent_danger']};font-family:Roboto Mono,monospace;"
-            f"font-size:28px;font-weight:700;"
-        )
-        self._hr_unit.setStyleSheet(f"color:{L['text_tertiary']};font-size:12px;")
-        self._hr_q.setStyleSheet(f"color:{L['accent_success']};font-size:12px;")
-        self._rr_lbl.setStyleSheet(f"color:{L['text_secondary']};font-size:12px;")
-        self._rr_val.setStyleSheet(
-            f"color:{L['accent_info']};font-family:Roboto Mono,monospace;"
-            f"font-size:28px;font-weight:700;"
-        )
-        self._rr_unit.setStyleSheet(f"color:{L['text_tertiary']};font-size:12px;")
-        self._bat_lbl.setStyleSheet(f"color:{L['text_secondary']};font-size:12px;")
-        self._uptime_lbl.setStyleSheet(f"color:{L['text_secondary']};font-size:12px;")
+        pix = get_pixmap(name, 20)
+        colored = QPixmap(pix.size())
+        colored.fill(Qt.GlobalColor.transparent)
+        p = QPainter(colored)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+        p.setBrush(QColor(L["accent_danger"] if name == "heart" else L["accent_info"]))
+        p.drawPixmap(0, 0, pix)
+        p.end()
+        return colored
+
+    def paintEvent(self, _evt) -> None:
+        # 自定义绘制：在背景上叠一层微弱渐变光晕
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect = self.rect()
+        grad = QLinearGradient(0, 0, rect.width(), rect.height())
+        L = theme.current()
+        c = QColor(L["brand_primary"])
+        c.setAlphaF(0.05)
+        grad.setColorAt(0, c)
+        grad.setColorAt(1, QColor(0, 0, 0, 0))
+        p.fillRect(rect, QBrush(grad))
+        p.end()
 
     def update_vital(self, hr_bpm: int, rr_bpm: int, quality: int) -> None:
         self._hr_val.setText(str(hr_bpm))
         self._rr_val.setText(str(rr_bpm))
-        self._hr_q.setText(f"● {self._quality_label(quality)}")
+        self._q_lbl.setText(f"● {self._quality_label(quality)}")
+        # 启动呼吸式动画
+        if self._pulse_anim and self._pulse_anim.state() != QPropertyAnimation.State.Running:
+            self._pulse_anim.start()
 
     def update_status(self, level_pct: int, uptime_s: int) -> None:
-        self._bat_lbl.setText(f"电量: {level_pct}%")
+        self._bat_lbl.setText(f"电量 {level_pct}%")
         h = uptime_s // 3600
         m = (uptime_s % 3600) // 60
         s = uptime_s % 60
-        self._uptime_lbl.setText(f"运行时长: {h:02d}:{m:02d}:{s:02d}")
+        self._uptime_lbl.setText(f"运行时长 {h:02d}:{m:02d}:{s:02d}")
 
     @staticmethod
     def _quality_label(q: int) -> str:
         if q >= 90:
-            return "良好"
+            return "信号质量 良好"
         if q >= 60:
-            return "一般"
-        return "差"
+            return "信号质量 一般"
+        return "信号质量 差"

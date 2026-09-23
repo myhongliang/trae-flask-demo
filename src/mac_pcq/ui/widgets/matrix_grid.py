@@ -1,31 +1,33 @@
-"""MatrixGrid：4×4 压阻热力图（参见 UI 设计 §6.2 / §8）。
+"""MatrixGrid：4×4 压阻热力图（参见《UI 设计》§6.2 + §8）。
 
-- 单元 60×60px，间距 2px
-- 6 种基色 + 5 档深度（通过线性插值近似）
-- 数值右下角小字 / 悬停 tooltip
+- 单元 60×60（缩略）/ 80×80（详情），间距 2px
+- 悬停放大 + tooltip
+- 色阶 6 基色
+- 数值右下角小字
 """
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
-from PySide6.QtCore import Qt, QRectF, QPointF
-from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPen
+from PySide6.QtCore import Qt, QRectF, QPointF, QPropertyAnimation, QEasingCurve
+from PySide6.QtGui import QPainter, QColor, QFont, QPen, QBrush
 from PySide6.QtWidgets import QWidget
 
-from mac_pcq.ui import theme
+from .. import theme
 
 
 def _interpolate(c1: str, c2: str, t: float) -> QColor:
     a = QColor(c1)
     b = QColor(c2)
-    r = int(a.red() * (1 - t) + b.red() * t)
-    g = int(a.green() * (1 - t) + b.green() * t)
-    bl = int(a.blue() * (1 - t) + b.blue() * t)
-    return QColor(r, g, bl)
+    return QColor(
+        int(a.red() * (1 - t) + b.red() * t),
+        int(a.green() * (1 - t) + b.green() * t),
+        int(a.blue() * (1 - t) + b.blue() * t),
+    )
 
 
-def _value_to_color(value: float, vmin: float, vmax: float, base: str) -> QColor:
+def value_to_color(value: float, vmin: float, vmax: float, base: str) -> QColor:
     if vmax <= vmin:
         t = 0.5
     else:
@@ -40,8 +42,6 @@ def _value_to_color(value: float, vmin: float, vmax: float, base: str) -> QColor
 
 
 class MatrixGrid(QWidget):
-    """4×4 矩阵热力图。"""
-
     def __init__(
         self,
         cell: int = 60,
@@ -59,12 +59,15 @@ class MatrixGrid(QWidget):
         self.vmin = vmin
         self.vmax = vmax
         self.unit = unit
-        self._values: List[float] = [0.0] * 16
+        self._values = [0.0] * 16
         self._hover_idx: Optional[int] = None
+        self._selected: Optional[int] = None
+        self._hover_scale: float = 1.0
+        self._hover_anim: Optional[QPropertyAnimation] = None
         self.setFixedSize(4 * cell + 3 * gap, 4 * cell + 3 * gap)
         self.setMouseTracking(True)
 
-    def set_values(self, values_16: List[float]) -> None:
+    def set_values(self, values_16) -> None:
         if len(values_16) != 16:
             return
         self._values = list(values_16)
@@ -79,32 +82,78 @@ class MatrixGrid(QWidget):
         self.base = base
         self.update()
 
+    def set_selected(self, idx: Optional[int]) -> None:
+        self._selected = idx
+        self.update()
+
+    def selected(self) -> Optional[int]:
+        return self._selected
+
+    def _animate_hover(self, on: bool) -> None:
+        if self._hover_anim:
+            self._hover_anim.stop()
+        anim = QPropertyAnimation(self, b"hover_scale")
+        anim.setDuration(theme.DURATION["fast"])
+        anim.setStartValue(self._hover_scale)
+        anim.setEndValue(1.15 if on else 1.0)
+        anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        anim.start()
+        self._hover_anim = anim
+
+    def get_hover_scale(self) -> float:
+        return self._hover_scale
+
+    def set_hover_scale(self, v: float) -> None:
+        self._hover_scale = v
+        self.update()
+
+    hover_scale = property(get_hover_scale, set_hover_scale)
+
     def paintEvent(self, _evt) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         L = theme.current()
+        # 整体平移让 hover 放大不超出容器
+        # 简化：hover 放大 = 在原位置缩放绘制
+        cx_offsets = [0] * 16
+        cy_offsets = [0] * 16
+        if self._hover_idx is not None:
+            row = self._hover_idx // 4
+            col = self._hover_idx % 4
+            cx = col * (self.cell + self.gap) + self.cell // 2
+            cy = row * (self.cell + self.gap) + self.cell // 2
+            # 整体平移让 hover 居中
+            p.translate(cx, cy)
+            p.scale(self._hover_scale, self._hover_scale)
+            p.translate(-cx, -cy)
+
         for i in range(16):
             row, col = i // 4, i % 4
             x = col * (self.cell + self.gap)
             y = row * (self.cell + self.gap)
-            color = _value_to_color(self._values[i], self.vmin, self.vmax, self.base)
+            color = value_to_color(self._values[i], self.vmin, self.vmax, self.base)
             p.setBrush(QBrush(color))
-            pen_color = QColor(L["brand_primary"]) if self._hover_idx == i else QColor(L["border_default"])
-            pen_w = 2 if self._hover_idx == i else 1
+            if i == self._selected:
+                pen_color = QColor(L["accent_warning"])
+                pen_w = 3
+            elif self._hover_idx == i:
+                pen_color = QColor(L["brand_primary"])
+                pen_w = 2
+            else:
+                pen_color = QColor(L["border_default"])
+                pen_w = 1
             p.setPen(QPen(pen_color, pen_w))
             p.drawRect(x, y, self.cell, self.cell)
-            # 右下角数值
+            # 数值
             p.setPen(QColor(L["text_primary"]))
             f = QFont()
-            f.setPixelSize(10)
+            f.setPixelSize(11)
+            f.setWeight(QFont.Weight.Medium)
             p.setFont(f)
             txt = f"{self._values[i]:.1f}"
-            text_rect = QRectF(x + self.cell - 36, y + self.cell - 16, 32, 14)
+            text_rect = QRectF(x + 4, y + self.cell - 18, self.cell - 8, 14)
             p.drawText(text_rect, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, txt)
         p.end()
-
-    def restyle(self) -> None:
-        self.update()
 
     def mouseMoveEvent(self, evt) -> None:
         pos = evt.position() if hasattr(evt, "position") else QPointF(evt.pos())
@@ -112,15 +161,21 @@ class MatrixGrid(QWidget):
         col = x // (self.cell + self.gap)
         row = y // (self.cell + self.gap)
         if 0 <= row < 4 and 0 <= col < 4:
-            self._hover_idx = row * 4 + col
-            self.setToolTip(f"ch{self._hover_idx + 1}: {self._values[self._hover_idx]:.2f} {self.unit}")
-            self.update()
+            idx = row * 4 + col
+            if idx != self._hover_idx:
+                self._hover_idx = idx
+                self.setToolTip(f"通道 {idx + 1}：{self._values[idx]:.2f} {self.unit}")
+                self._animate_hover(True)
         else:
+            if self._hover_idx is not None:
+                self._animate_hover(False)
             self._hover_idx = None
             self.setToolTip("")
-            self.update()
+        self.update()
 
     def leaveEvent(self, _evt) -> None:
+        if self._hover_idx is not None:
+            self._animate_hover(False)
         self._hover_idx = None
         self.setToolTip("")
         self.update()

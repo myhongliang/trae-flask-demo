@@ -1,25 +1,30 @@
-"""ParamForm：通用参数表单（参见 UI 设计 §6.7）。"""
+"""ParamForm：通用参数表单（参见《UI 设计》§6.7）。
+
+- 字段：int / float / bool / choice / string
+- 应用 / 导入 / 导出按钮
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, List
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QWidget, QFormLayout, QSpinBox, QDoubleSpinBox, QComboBox, QCheckBox,
-    QPushButton, QHBoxLayout, QLineEdit, QLabel,
+    QHBoxLayout, QLineEdit,
 )
 
-from mac_pcq.ui import theme
+from .. import theme
+from .buttons import PrimaryButton, SecondaryButton
 
 
 @dataclass
 class FieldSpec:
     key: str
     label: str
-    kind: str = "int"    # int / float / bool / choice / string
-    choices: List[Tuple[str, Any]] = field(default_factory=list)
+    kind: str = "int"
+    choices: list = field(default_factory=list)
     min: float = 0
     max: float = 1_000_000
     step: float = 1
@@ -33,13 +38,12 @@ class ParamForm(QWidget):
 
     def __init__(self, fields: List[FieldSpec], parent=None) -> None:
         super().__init__(parent)
-        L = theme.LIGHT
         self._fields = {f.key: f for f in fields}
-        self._widgets: Dict[str, Any] = {}
+        self._widgets: dict = {}
 
         layout = QFormLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
         layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
 
         for f in fields:
@@ -62,27 +66,17 @@ class ParamForm(QWidget):
                 w = QLineEdit()
             else:
                 raise ValueError(f"unknown field kind: {f.kind}")
-            w.setStyleSheet(
-                f"QSpinBox,QDoubleSpinBox,QComboBox,QLineEdit{{padding:4px;border:1px solid {L['border_default']};"
-                f"border-radius:4px;background:{L['bg_primary']};}}"
-            )
+            self._widgets[f.key] = w
             label = f.label + (f" ({f.unit})" if f.unit else "")
             layout.addRow(label, w)
-            self._widgets[f.key] = w
 
-        # 操作按钮
         row = QHBoxLayout()
-        apply_btn = QPushButton("应用到设备")
-        apply_btn.setStyleSheet(
-            f"background:{L['brand_primary']};color:white;border:0;border-radius:4px;"
-            f"padding:8px 16px;font-weight:600;"
-        )
+        row.setSpacing(8)
+        apply_btn = PrimaryButton("应用到设备", icon="upload")
         apply_btn.clicked.connect(self.apply_clicked)
-        export_btn = QPushButton("⤓  导出配置")
-        export_btn.setStyleSheet(self._ghost_style())
+        export_btn = SecondaryButton("导出配置", icon="download")
         export_btn.clicked.connect(self.export_clicked)
-        import_btn = QPushButton("⤒  导入配置")
-        import_btn.setStyleSheet(self._ghost_style())
+        import_btn = SecondaryButton("导入配置", icon="upload")
         import_btn.clicked.connect(self.import_clicked)
         row.addWidget(apply_btn)
         row.addStretch(1)
@@ -90,15 +84,7 @@ class ParamForm(QWidget):
         row.addWidget(import_btn)
         layout.addRow("", _wrap(row))
 
-    @staticmethod
-    def _ghost_style() -> str:
-        L = theme.LIGHT
-        return (
-            f"background:{L['bg_secondary']};color:{L['text_primary']};"
-            f"border:1px solid {L['border_default']};border-radius:4px;padding:8px 16px;"
-        )
-
-    def set_values(self, values: Dict[str, Any]) -> None:
+    def set_values(self, values: dict) -> None:
         for k, v in values.items():
             if k not in self._widgets:
                 continue
@@ -118,8 +104,8 @@ class ParamForm(QWidget):
             elif f.kind == "string":
                 w.setText(str(v))
 
-    def get_values(self) -> Dict[str, Any]:
-        out: Dict[str, Any] = {}
+    def get_values(self) -> dict:
+        out: dict = {}
         for k, w in self._widgets.items():
             f = self._fields[k]
             if f.kind == "int":
@@ -137,7 +123,7 @@ class ParamForm(QWidget):
         return out
 
 
-def _wrap(layout):
+def _wrap(layout) -> QWidget:
     w = QWidget()
     w.setLayout(layout)
     return w
