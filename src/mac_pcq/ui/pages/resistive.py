@@ -16,7 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple
 
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, QRectF
 from PySide6.QtGui import QColor, QPainter, QBrush, QPen, QFont
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout, QPushButton,
@@ -59,39 +59,41 @@ class _BigMatrix(MatrixGrid):
 
     def paintEvent(self, _evt) -> None:
         p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-        L = theme.current()
-        for i in range(16):
-            row, col = i // 4, i % 4
-            x = col * (self.cell + self.gap)
-            y = row * (self.cell + self.gap)
-            color = _value_to_color(self._values[i], self.vmin, self.vmax, self.base)
-            p.setBrush(QBrush(color))
-            # 悬停高亮 / 选中金色边框
-            if i == self._selected:
-                pen_color = QColor(L["accent_warning"])
-                pen_w = 3
-            elif self._hover_idx == i:
-                pen_color = QColor(L["brand_primary"])
-                pen_w = 2
-            else:
-                pen_color = QColor(L["border_default"])
-                pen_w = 1
-            p.setPen(QPen(pen_color, pen_w))
-            p.drawRect(x, y, self.cell, self.cell)
-            # 数值
-            p.setPen(QColor(L["text_primary"]))
-            f = QFont()
-            f.setPixelSize(11)
-            p.setFont(f)
-            txt = f"{self._values[i]:.1f}"
-            text_rect = QRectF(x + self.cell - 44, y + self.cell - 18, 40, 16)
-            p.drawText(text_rect, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, txt)
-        p.end()
+        try:
+            p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+            L = theme.current()
+            for i in range(16):
+                row, col = i // 4, i % 4
+                x = col * (self.cell + self.gap)
+                y = row * (self.cell + self.gap)
+                color = _value_to_color(self._values[i], self.vmin, self.vmax, self.base)
+                p.setBrush(QBrush(color))
+                # 悬停高亮 / 选中金色边框
+                if i == self._selected:
+                    pen_color = QColor(L["accent_warning"])
+                    pen_w = 3
+                elif self._hover_idx == i:
+                    pen_color = QColor(L["brand_primary"])
+                    pen_w = 2
+                else:
+                    pen_color = QColor(L["border_default"])
+                    pen_w = 1
+                p.setPen(QPen(pen_color, pen_w))
+                p.drawRect(x, y, self.cell, self.cell)
+                # 数值
+                p.setPen(QColor(L["text_primary"]))
+                f = QFont()
+                f.setPixelSize(11)
+                p.setFont(f)
+                txt = f"{self._values[i]:.1f}"
+                text_rect = QRectF(x + self.cell - 44, y + self.cell - 18, 40, 16)
+                p.drawText(text_rect, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, txt)
+        finally:
+            p.end()
 
 
 def _value_to_color(value: float, vmin: float, vmax: float, base: str) -> QColor:
-    from ..widgets.matrix_grid import _value_to_color as _impl
+    from ..widgets.matrix_grid import value_to_color as _impl
     return _impl(value, vmin, vmax, base)
 
 

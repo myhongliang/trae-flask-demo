@@ -29,30 +29,32 @@ class ColorScaleBar(QWidget):
 
     def paintEvent(self, _evt) -> None:
         p = QPainter(self)
-        L = theme.current()
-        bar_rect = QRectF(0, 12, self.width() - 100, 16)
-        stops = theme.COLOR_BASES.get(self.base, theme.COLOR_BASES["blue_red"])
-        grad = QLinearGradient(bar_rect.left(), 0, bar_rect.right(), 0)
-        n = len(stops)
-        for i, c in enumerate(stops):
-            grad.setColorAt(i / max(1, n - 1), QColor(c))
-        p.fillRect(bar_rect, QBrush(grad))
-        # 边框
-        p.setPen(QColor(L["border_default"]))
-        p.drawRect(bar_rect)
-        # 端点标记
-        p.setBrush(QColor(stops[0]))
-        p.drawEllipse(bar_rect.left() - 4, bar_rect.center().y() - 4, 8, 8)
-        p.setBrush(QColor(stops[-1]))
-        p.drawEllipse(bar_rect.right() - 4, bar_rect.center().y() - 4, 8, 8)
+        try:
+            L = theme.current()
+            bar_rect = QRectF(0, 12, self.width() - 100, 16)
+            stops = theme.COLOR_BASES.get(self.base, theme.COLOR_BASES["blue_red"])
+            grad = QLinearGradient(bar_rect.left(), 0, bar_rect.right(), 0)
+            n = len(stops)
+            for i, c in enumerate(stops):
+                grad.setColorAt(i / max(1, n - 1), QColor(c))
+            p.fillRect(bar_rect, QBrush(grad))
+            # 边框
+            p.setPen(QColor(L["border_default"]))
+            p.drawRect(bar_rect)
+            # 端点标记
+            p.setBrush(QColor(stops[0]))
+            p.drawEllipse(bar_rect.left() - 4, bar_rect.center().y() - 4, 8, 8)
+            p.setBrush(QColor(stops[-1]))
+            p.drawEllipse(bar_rect.right() - 4, bar_rect.center().y() - 4, 8, 8)
 
-        # 数字标签
-        f = QFont()
-        f.setPixelSize(theme.FONT_SIZE["small"])
-        f.setFamily(theme.FONT_STACK["mono"])
-        p.setFont(f)
-        p.setPen(QColor(L["text_secondary"]))
-        p.drawText(self.width() - 92, 14, f"{self.vmax:.0f}")
-        p.drawText(self.width() - 92, 30, f"{self.vmin:.0f}")
-        p.drawText(self.width() - 60, 22, self.unit)
-        p.end()
+            # 数字标签
+            f = QFont()
+            f.setPixelSize(theme.FONT_SIZE["small"])
+            f.setFamily(theme.FONT_STACK["mono"])
+            p.setFont(f)
+            p.setPen(QColor(L["text_secondary"]))
+            p.drawText(self.width() - 92, 14, f"{self.vmax:.0f}")
+            p.drawText(self.width() - 92, 30, f"{self.vmin:.0f}")
+            p.drawText(self.width() - 60, 22, self.unit)
+        finally:
+            p.end()

@@ -111,49 +111,51 @@ class MatrixGrid(QWidget):
 
     def paintEvent(self, _evt) -> None:
         p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-        L = theme.current()
-        # 整体平移让 hover 放大不超出容器
-        # 简化：hover 放大 = 在原位置缩放绘制
-        cx_offsets = [0] * 16
-        cy_offsets = [0] * 16
-        if self._hover_idx is not None:
-            row = self._hover_idx // 4
-            col = self._hover_idx % 4
-            cx = col * (self.cell + self.gap) + self.cell // 2
-            cy = row * (self.cell + self.gap) + self.cell // 2
-            # 整体平移让 hover 居中
-            p.translate(cx, cy)
-            p.scale(self._hover_scale, self._hover_scale)
-            p.translate(-cx, -cy)
+        try:
+            p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+            L = theme.current()
+            # 整体平移让 hover 放大不超出容器
+            # 简化：hover 放大 = 在原位置缩放绘制
+            cx_offsets = [0] * 16
+            cy_offsets = [0] * 16
+            if self._hover_idx is not None:
+                row = self._hover_idx // 4
+                col = self._hover_idx % 4
+                cx = col * (self.cell + self.gap) + self.cell // 2
+                cy = row * (self.cell + self.gap) + self.cell // 2
+                # 整体平移让 hover 居中
+                p.translate(cx, cy)
+                p.scale(self._hover_scale, self._hover_scale)
+                p.translate(-cx, -cy)
 
-        for i in range(16):
-            row, col = i // 4, i % 4
-            x = col * (self.cell + self.gap)
-            y = row * (self.cell + self.gap)
-            color = value_to_color(self._values[i], self.vmin, self.vmax, self.base)
-            p.setBrush(QBrush(color))
-            if i == self._selected:
-                pen_color = QColor(L["accent_warning"])
-                pen_w = 3
-            elif self._hover_idx == i:
-                pen_color = QColor(L["brand_primary"])
-                pen_w = 2
-            else:
-                pen_color = QColor(L["border_default"])
-                pen_w = 1
-            p.setPen(QPen(pen_color, pen_w))
-            p.drawRect(x, y, self.cell, self.cell)
-            # 数值
-            p.setPen(QColor(L["text_primary"]))
-            f = QFont()
-            f.setPixelSize(11)
-            f.setWeight(QFont.Weight.Medium)
-            p.setFont(f)
-            txt = f"{self._values[i]:.1f}"
-            text_rect = QRectF(x + 4, y + self.cell - 18, self.cell - 8, 14)
-            p.drawText(text_rect, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, txt)
-        p.end()
+            for i in range(16):
+                row, col = i // 4, i % 4
+                x = col * (self.cell + self.gap)
+                y = row * (self.cell + self.gap)
+                color = value_to_color(self._values[i], self.vmin, self.vmax, self.base)
+                p.setBrush(QBrush(color))
+                if i == self._selected:
+                    pen_color = QColor(L["accent_warning"])
+                    pen_w = 3
+                elif self._hover_idx == i:
+                    pen_color = QColor(L["brand_primary"])
+                    pen_w = 2
+                else:
+                    pen_color = QColor(L["border_default"])
+                    pen_w = 1
+                p.setPen(QPen(pen_color, pen_w))
+                p.drawRect(x, y, self.cell, self.cell)
+                # 数值
+                p.setPen(QColor(L["text_primary"]))
+                f = QFont()
+                f.setPixelSize(11)
+                f.setWeight(QFont.Weight.Medium)
+                p.setFont(f)
+                txt = f"{self._values[i]:.1f}"
+                text_rect = QRectF(x + 4, y + self.cell - 18, self.cell - 8, 14)
+                p.drawText(text_rect, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, txt)
+        finally:
+            p.end()
 
     def mouseMoveEvent(self, evt) -> None:
         pos = evt.position() if hasattr(evt, "position") else QPointF(evt.pos())
