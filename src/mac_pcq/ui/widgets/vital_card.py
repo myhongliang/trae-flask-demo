@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
+from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, Property
 from PySide6.QtGui import QPainter, QColor, QLinearGradient, QBrush, QFont
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
 
@@ -106,7 +106,8 @@ class VitalCard(QWidget):
         self._pulse_opacity = v
         self.update()
 
-    pulse_opacity = property(get_pulse_opacity, set_pulse_opacity)
+    # Qt 元对象系统识别的属性（供 QPropertyAnimation 使用）
+    pulse_opacity = Property(float, get_pulse_opacity, set_pulse_opacity)
 
     def _lbl_style(self, size: int, weight: int, color_key: str = "text_secondary") -> str:
         L = theme.current()

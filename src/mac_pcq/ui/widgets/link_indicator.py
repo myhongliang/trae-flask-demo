@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
+from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, Property
 from PySide6.QtGui import QPainter, QColor
 from PySide6.QtWidgets import QWidget
 
@@ -82,6 +82,12 @@ class LinkIndicator(QWidget):
     def setOpacity(self, v: float) -> None:
         self._opacity = v
         self.update()
+
+    def _get_opacity(self) -> float:
+        return getattr(self, "_opacity", 1.0)
+
+    # Qt 元对象系统识别的属性（供 QPropertyAnimation 使用）
+    opacity = Property(float, _get_opacity, setOpacity)
 
     def paintEvent(self, _evt) -> None:
         p = QPainter(self)

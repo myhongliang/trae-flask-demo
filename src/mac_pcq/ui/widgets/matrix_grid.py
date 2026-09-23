@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from PySide6.QtCore import Qt, QRectF, QPointF, QPropertyAnimation, QEasingCurve
+from PySide6.QtCore import Qt, QRectF, QPointF, QPropertyAnimation, QEasingCurve, Property
 from PySide6.QtGui import QPainter, QColor, QFont, QPen, QBrush
 from PySide6.QtWidgets import QWidget
 
@@ -107,7 +107,8 @@ class MatrixGrid(QWidget):
         self._hover_scale = v
         self.update()
 
-    hover_scale = property(get_hover_scale, set_hover_scale)
+    # Qt 元对象系统识别的属性（供 QPropertyAnimation 使用）
+    hover_scale = Property(float, get_hover_scale, set_hover_scale)
 
     def paintEvent(self, _evt) -> None:
         p = QPainter(self)
