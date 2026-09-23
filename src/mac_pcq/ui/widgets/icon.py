@@ -31,7 +31,10 @@ def _svg_renderer(name: str) -> Optional[QSvgRenderer]:
 
 
 def get_icon(name: str, color: Optional[str] = None, size: int = 16) -> QIcon:
-    """返回带颜色（默认 currentColor / 主题 text_primary）的 QIcon。"""
+    """返回带颜色（默认 currentColor / 主题 text_primary）的 QIcon。
+
+    QSvg 不直接渲染 currentColor，因此我们手动用前景色画一份。
+    """
     renderer = _svg_renderer(name)
     if renderer is None:
         return QIcon()
@@ -40,22 +43,14 @@ def get_icon(name: str, color: Optional[str] = None, size: int = 16) -> QIcon:
     pix = QPixmap(size, size)
     pix.fill(Qt.GlobalColor.transparent)
     painter = QPainter(pix)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    renderer.render(painter)
-    # QSvg 不直接渲染 currentColor，需要把图标绘制成"形状 mask"，再填充颜色
-    # 简化处理：让 QSS 控制按钮 / 标签前景色时显示
-    # 此处我们重画一份带颜色的版本
-    pix2 = QPixmap(size, size)
-    pix2.fill(Qt.GlobalColor.transparent)
-    painter2 = QPainter(pix2)
-    painter2.setRenderHint(QPainter.RenderHint.Antialiasing)
-    painter2.setPen(QColor(color))
-    painter2.setBrush(QColor(color))
-    # 重新渲染（QSvg 读取 path 后我们用 painter 改前景色）
-    renderer.render(painter2)
-    painter.end()
-    painter2.end()
-    return QIcon(pix2)
+    try:
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QColor(color))
+        painter.setBrush(QColor(color))
+        renderer.render(painter)
+    finally:
+        painter.end()
+    return QIcon(pix)
 
 
 def get_pixmap(name: str, size: int = 16) -> QPixmap:

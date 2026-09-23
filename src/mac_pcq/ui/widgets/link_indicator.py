@@ -63,7 +63,11 @@ class LinkIndicator(QWidget):
             self._anim.start()
         elif self._anim and self._anim.state() == QPropertyAnimation.State.Running:
             self._anim.stop()
-            self.setOpacity(1.0)
+            self._set_opacity(1.0)
+        self.update()
+
+    def restyle(self) -> None:
+        """主题切换：颜色从 theme 重新取，触发重绘。"""
         self.update()
 
     def _build_animation(self) -> None:
@@ -79,7 +83,7 @@ class LinkIndicator(QWidget):
         anim.finished.connect(lambda: None)
         self._anim = anim
 
-    def setOpacity(self, v: float) -> None:
+    def _set_opacity(self, v: float) -> None:
         self._opacity = v
         self.update()
 
@@ -87,7 +91,8 @@ class LinkIndicator(QWidget):
         return getattr(self, "_opacity", 1.0)
 
     # Qt 元对象系统识别的属性（供 QPropertyAnimation 使用）
-    opacity = Property(float, _get_opacity, setOpacity)
+    # 命名仍叫 opacity 以匹配 QPropertyAnimation(self, b"opacity")
+    opacity = Property(float, _get_opacity, _set_opacity)
 
     def paintEvent(self, _evt) -> None:
         p = QPainter(self)

@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter, QColor, QBrush, QFont, QFontMetrics, QPixmap
+from PySide6.QtGui import QPainter, QColor, QFont, QPixmap
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel
 
 from ...domain.session import SessionState
@@ -56,6 +56,10 @@ class StatusBadge(QWidget):
         self._state = s
         self._refresh()
 
+    def restyle(self) -> None:
+        """主题切换后重新计算背景/前景色。"""
+        self._refresh()
+
     def _refresh(self) -> None:
         color_key, text, icon_name = _STATE[self._state]
         L = theme.current()
@@ -77,13 +81,11 @@ class StatusBadge(QWidget):
         colored = QPixmap(pix.size())
         colored.fill(Qt.GlobalColor.transparent)
         p = QPainter(colored)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-        p.setBrush(QColor(fg))
-        p.drawPixmap(0, 0, pix)
-        p.end()
+        try:
+            p.setRenderHint(QPainter.RenderHint.Antialiasing)
+            p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+            p.setBrush(QColor(fg))
+            p.drawPixmap(0, 0, pix)
+        finally:
+            p.end()
         self._icon_lbl.setPixmap(colored)
-
-    def paintEvent(self, _evt) -> None:
-        # 背景由 QSS 控制，这里空实现避免 widget 自身绘制干扰
-        pass

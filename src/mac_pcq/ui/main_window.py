@@ -327,16 +327,24 @@ class MainWindow(QMainWindow):
         self._theme_btn.setToolTip(f"切换主题（当前：{'暗色' if new == 'dark' else '浅色'}）")
 
     def _on_theme_changed(self, _name: str) -> None:
-        # 重设所有 inline style（顶栏 / 侧栏 / 底栏的额外标签颜色）
+        """主题切换：重注 QSS + 遍历所有页面调用 restyle()（同步 inline style）。"""
         L = theme.current()
         # 重新应用 QSS 到本窗口
         self.style().unpolish(self)
         self.style().polish(self)
         # 强制各 widget repaint
         for w in (self.link_ind, self.status_badge, self._link_info, self._rec_lbl,
-                  self._brand_title, self._brand_sub):
+                  self._brand_title, self._brand_sub, self._theme_btn):
             if w is not None:
                 w.update()
+        # 遍历所有页面（确保主题切换后 GroupBox / inline style / ParamForm 同步刷新）
+        for page in getattr(self, "pages", []):
+            restyle = getattr(page, "restyle", None)
+            if callable(restyle):
+                try:
+                    page.restyle()
+                except Exception:  # noqa: BLE001
+                    pass
 
     def _install_shortcuts(self) -> None:
         for i in range(1, 10):

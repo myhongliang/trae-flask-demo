@@ -126,8 +126,8 @@ class VitalCard(QWidget):
 
     def _refresh(self) -> None:
         # 图标
-        hr_pix = self._tinted_icon("heart")
-        rr_pix = self._tinted_icon("battery")  # 暂时用电池代表 RR（或新增 lung.svg）
+        hr_pix = self._tinted_icon("heart", "accent_danger")
+        rr_pix = self._tinted_icon("waveform", "accent_info")   # 用波形图标代表 RR
         self._hr_icon_lbl.setPixmap(hr_pix)
         self._rr_icon_lbl.setPixmap(rr_pix)
 
@@ -140,18 +140,20 @@ class VitalCard(QWidget):
             f"border-radius:12px;"
         )
 
-    def _tinted_icon(self, name: str) -> "QPixmap":
+    def _tinted_icon(self, name: str, color_key: str = "accent_info") -> "QPixmap":
         from PySide6.QtGui import QPixmap
         L = theme.current()
         pix = get_pixmap(name, 20)
         colored = QPixmap(pix.size())
         colored.fill(Qt.GlobalColor.transparent)
         p = QPainter(colored)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-        p.setBrush(QColor(L["accent_danger"] if name == "heart" else L["accent_info"]))
-        p.drawPixmap(0, 0, pix)
-        p.end()
+        try:
+            p.setRenderHint(QPainter.RenderHint.Antialiasing)
+            p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+            p.setBrush(QColor(L[color_key]))
+            p.drawPixmap(0, 0, pix)
+        finally:
+            p.end()
         return colored
 
     def paintEvent(self, _evt) -> None:
@@ -182,6 +184,10 @@ class VitalCard(QWidget):
         m = (uptime_s % 3600) // 60
         s = uptime_s % 60
         self._uptime_lbl.setText(f"运行时长 {h:02d}:{m:02d}:{s:02d}")
+
+    def restyle(self) -> None:
+        """主题切换：重新计算背景/标签色 + 重画图标。"""
+        self._refresh()
 
     @staticmethod
     def _quality_label(q: int) -> str:

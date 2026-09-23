@@ -104,10 +104,8 @@ class PageConfig(QWidget):
         self._export_btn = QPushButton("⤓  导出配置")
         self._reset_btn = QPushButton("恢复默认值")
         for btn in (self._import_btn, self._export_btn, self._reset_btn):
-            btn.setStyleSheet(
-                f"background:{L['bg_secondary']};color:{L['text_primary']};"
-                f"border:1px solid {L['border_default']};border-radius:4px;padding:8px 16px;"
-            )
+            btn.setProperty("variant", "secondary")
+            btn.setMinimumHeight(theme.BUTTON["height_md"])
             op_row.addWidget(btn)
         op_row.addStretch(1)
         self._import_btn.clicked.connect(self._on_import)
@@ -195,7 +193,8 @@ class PageConfig(QWidget):
     # ---- 重置 ----
     def _on_reset(self) -> None:
         ret = ConfirmDialog.ask(
-            self, "恢复默认", "确认恢复所有参数为默认值？",
+            "恢复默认", "确认恢复所有参数为默认值？",
+            parent=self,
             danger=True, confirm_text="恢复",
         )
         if ret:
@@ -224,8 +223,7 @@ class PageConfig(QWidget):
                 f"QGroupBox::title{{subcontrol-origin:margin;left:8px;padding:0 4px;"
                 f"color:{L['text_secondary']};}}"
             )
+        # 按钮现在用 variant，主题切换由 QSS 接管，只需强制 unpolish/polish
         for btn in (self._import_btn, self._export_btn, self._reset_btn):
-            btn.setStyleSheet(
-                f"background:{L['bg_secondary']};color:{L['text_primary']};"
-                f"border:1px solid {L['border_default']};border-radius:4px;padding:8px 16px;"
-            )
+            self.style().unpolish(btn)
+            self.style().polish(btn)

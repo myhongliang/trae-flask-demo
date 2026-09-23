@@ -52,6 +52,9 @@ def test_theme_subscribe_notified():
     # 清空已有 subscribers
     theme_mod._subscribers.clear()
 
+    # 重置到 dark（避开默认主题，使所有 set_theme 都触发）
+    theme_mod._current_theme_name = "dark"
+
     calls = []
     theme.subscribe(lambda n: calls.append(n))
 

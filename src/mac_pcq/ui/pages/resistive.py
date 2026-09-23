@@ -139,11 +139,9 @@ class PageResistive(QWidget):
         format_row.addStretch(1)
         # 操作按钮
         self._reset_map_btn = QPushButton("恢复默认映射")
+        self._reset_map_btn.setProperty("variant", "secondary")
+        self._reset_map_btn.setMinimumHeight(theme.BUTTON["height_sm"])
         self._reset_map_btn.clicked.connect(self._reset_mapping)
-        self._reset_map_btn.setStyleSheet(
-            f"background:{L['bg_secondary']};color:{L['text_primary']};"
-            f"border:1px solid {L['border_default']};border-radius:4px;padding:6px 12px;"
-        )
         format_row.addWidget(self._reset_map_btn)
 
         # ==== 色阶配置（基色 + 深度档位）====
@@ -217,11 +215,9 @@ class PageResistive(QWidget):
         self._p2_sb.setRange(-1000.0, 10000.0)
         self._p2_sb.setSuffix(" N")
         cal_btn = QPushButton("解算 a, b")
+        cal_btn.setProperty("variant", "primary")
+        cal_btn.setMinimumHeight(theme.BUTTON["height_sm"])
         cal_btn.clicked.connect(self._solve_calib)
-        cal_btn.setStyleSheet(
-            f"background:{L['brand_primary']};color:white;border:0;border-radius:4px;"
-            f"padding:6px 12px;font-weight:600;"
-        )
         cal_form.addRow("(R₁, P₁)：", _wrap_row(self._r1_sb, self._p1_sb))
         cal_form.addRow("(R₂, P₂)：", _wrap_row(self._r2_sb, self._p2_sb))
         cal_form.addRow("", cal_btn)
@@ -322,15 +318,16 @@ class PageResistive(QWidget):
         if sel is None:
             self._matrix.set_selected(idx)
             self._hint_lbl.setText(
-                f"已选中 通道 {sel if sel is not None else idx + 1}（{row},{col}）— 再点另一格互换"
+                f"已选中 通道 {idx + 1}（{row},{col}）— 再点另一格互换"
             )
         elif sel == idx:
             self._matrix.set_selected(None)
             self._hint_lbl.setText("提示：单击单元格选中 A，再单击另一格互换")
         else:
             ret = ConfirmDialog.ask(
-                self, "确认互换",
+                "确认互换",
                 f"交换 通道 {sel + 1} ↔ 通道 {idx + 1}？",
+                parent=self,
                 confirm_text="交换",
             )
             if ret:
@@ -341,8 +338,9 @@ class PageResistive(QWidget):
 
     def _reset_mapping(self) -> None:
         ret = ConfirmDialog.ask(
-            self, "恢复默认映射",
+            "恢复默认映射",
             "确认恢复默认（identity）映射？",
+            parent=self,
             confirm_text="恢复",
         )
         if ret:
@@ -392,10 +390,8 @@ class PageResistive(QWidget):
         self._scale.restyle()
         # hint label 重设
         self._hint_lbl.setStyleSheet(f"color:{L['text_tertiary']};font-size:12px;")
-        self._reset_map_btn.setStyleSheet(
-            f"background:{L['bg_secondary']};color:{L['text_primary']};"
-            f"border:1px solid {L['border_default']};border-radius:4px;padding:6px 12px;"
-        )
+        self.style().unpolish(self._reset_map_btn)
+        self.style().polish(self._reset_map_btn)
         for btn in self._base_btns:
             btn.setStyleSheet(self._color_btn_style())
 

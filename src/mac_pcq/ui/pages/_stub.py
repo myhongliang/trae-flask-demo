@@ -98,8 +98,9 @@ class StubPage(QWidget):
         root.addWidget(empty, 1)
 
     def restyle(self) -> None:
-        """主题切换：重设 hint 颜色（图标重画由 QSS 触发）。"""
+        """主题切换：重设 hint 颜色 + 重画图标（图标是 currentColor 友好但需要按主题色取）。"""
         self._hint.setStyleSheet(
             f"color:{theme.current()['text_tertiary']};"
             f"font-size:{theme.FONT_SIZE['body']}px;"
         )
+        self._ic.setPixmap(get_pixmap(self._icon, 64))

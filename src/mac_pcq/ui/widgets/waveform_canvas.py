@@ -23,7 +23,11 @@ from .. import theme
 
 
 def _configure_pyqtgraph(bg: str, fg: str) -> None:
-    pg.setConfigOptions(antialias=True, background=bg, foreground=fg)
+    # pyqtgraph 0.13 setConfigOptions 字符串走 setNamedColor（弃用警告），但不影响功能
+    # 改用 pg.setConfigOption 单项设置（在新版本里也兼容）
+    pg.setConfigOption("antialias", True)
+    pg.setConfigOption("background", bg)
+    pg.setConfigOption("foreground", fg)
 
 
 class WaveformCanvas(QWidget):

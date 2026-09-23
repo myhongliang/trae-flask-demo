@@ -193,7 +193,7 @@ COLOR_BASES = {
 }
 
 # ---- 主题管理 ----
-_current_theme_name: str = "dark"     # 现代仪表盘：默认暗色
+_current_theme_name: str = "light"    # 默认浅色（更友好，符合设计文档）
 _subscribers: list = []
 
 

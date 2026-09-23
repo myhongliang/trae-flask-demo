@@ -147,6 +147,8 @@ def _position_toasts() -> None:
         y = geo.bottom() - (i + 1) * (t.HEIGHT + 12) - 24
         t.move(x, y)
         t.show()
+        # 保证 Toast 始终在最上层（不被 Modal 遮挡）
+        t.raise_()
 
 
 def show_toast(message: str, kind: ToastKind = ToastKind.INFO, duration_ms: Optional[int] = None) -> Toast:
