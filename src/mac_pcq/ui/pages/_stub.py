@@ -16,17 +16,24 @@ class StubPage(QWidget):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        L = theme.LIGHT
+        L = theme.current()
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(12)
-        title = QLabel(self.TITLE)
-        title.setStyleSheet(
+        self._title = QLabel(self.TITLE)
+        self._title.setStyleSheet(
             f"color:{L['text_primary']};font-size:22px;font-weight:700;"
         )
-        layout.addWidget(title)
-        desc = QLabel(self.DESC)
-        desc.setStyleSheet(f"color:{L['text_secondary']};font-size:14px;")
-        desc.setWordWrap(True)
-        layout.addWidget(desc)
+        layout.addWidget(self._title)
+        self._desc = QLabel(self.DESC)
+        self._desc.setStyleSheet(f"color:{L['text_secondary']};font-size:14px;")
+        self._desc.setWordWrap(True)
+        layout.addWidget(self._desc)
         layout.addStretch(1)
+
+    def restyle(self) -> None:
+        L = theme.current()
+        self._title.setStyleSheet(
+            f"color:{L['text_primary']};font-size:22px;font-weight:700;"
+        )
+        self._desc.setStyleSheet(f"color:{L['text_secondary']};font-size:14px;")

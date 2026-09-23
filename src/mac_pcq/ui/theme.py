@@ -107,5 +107,45 @@ COLOR_BASES = {
 }
 
 
+# ---- 当前主题 + 切换 ----
+_current_theme_name: str = "light"
+_subscribers: list = []
+
+
+def current() -> dict:
+    return LIGHT if _current_theme_name == "light" else DARK
+
+
+def name() -> str:
+    return _current_theme_name
+
+
+def set_theme(name: str) -> None:
+    """切换主题并通知所有订阅者。"""
+    global _current_theme_name
+    if name not in ("light", "dark"):
+        return
+    if name == _current_theme_name:
+        return
+    _current_theme_name = name
+    for cb in _subscribers:
+        try:
+            cb(name)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def toggle() -> str:
+    """在浅 / 深之间切换，返回新主题名。"""
+    new = "dark" if _current_theme_name == "light" else "light"
+    set_theme(new)
+    return new
+
+
+def subscribe(callback) -> None:
+    """订阅主题变化（callback(name: str)）。"""
+    _subscribers.append(callback)
+
+
 def get_theme(name: str = "light") -> dict:
     return LIGHT if name == "light" else DARK

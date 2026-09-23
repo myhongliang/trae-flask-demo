@@ -1,4 +1,4 @@
-﻿"""ColorScaleBar：色阶图例（参见 UI 设计 §6.2.3）。"""
+"""ColorScaleBar：色阶图例（参见 UI 设计 §6.2.3）。"""
 
 from __future__ import annotations
 
@@ -37,13 +37,17 @@ class ColorScaleBar(QWidget):
         for i, c in enumerate(stops):
             grad.setColorAt(i / max(1, n - 1), QColor(c))
         p.fillRect(r, QBrush(grad))
-        p.setPen(QColor(theme.LIGHT["border_default"]))
+        L = theme.current()
+        p.setPen(QColor(L["border_default"]))
         p.drawRect(r)
 
         f = QFont()
         f.setPixelSize(11)
         p.setFont(f)
-        p.setPen(QColor(theme.LIGHT["text_secondary"]))
+        p.setPen(QColor(L["text_secondary"]))
         p.drawText(self.width() - 76, 6, f"{self.vmax:.0f} {self.unit}")
         p.drawText(self.width() - 76, 18, f"{self.vmin:.0f} {self.unit}")
         p.end()
+
+    def restyle(self) -> None:
+        self.update()

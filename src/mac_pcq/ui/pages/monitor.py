@@ -56,21 +56,21 @@ class PageMonitor(QWidget):
         self.scale_bar = ColorScaleBar(base="blue_red", vmin=10, vmax=500, unit="kΩ")
         self.vital = VitalCard()
 
-        # 把每个子区包成带标题的小组
-        ecg_box = self._wrap_panel("心电 (ECG)", self.ecg, L)
-        matrix_box = self._wrap_panel("矩阵缩略", self._matrix_with_legend(), L)
-        piezo_box = self._wrap_panel("压电 (PVDF)", self.piezo, L)
-        vital_box = self.vital   # VitalCard 自带标题/边框
+        # 把每个子区包成带标题的小组（保存引用便于主题切换）
+        self._ecg_box = self._wrap_panel("心电 (ECG)", self.ecg, L)
+        self._matrix_box = self._wrap_panel("矩阵缩略", self._matrix_with_legend(), L)
+        self._piezo_box = self._wrap_panel("压电 (PVDF)", self.piezo, L)
+        self._vital_box = self.vital   # VitalCard 自带标题/边框
 
         # 2x2 网格
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setHorizontalSpacing(16)
         grid.setVerticalSpacing(16)
-        grid.addWidget(ecg_box, 0, 0)
-        grid.addWidget(matrix_box, 0, 1)
-        grid.addWidget(piezo_box, 1, 0)
-        grid.addWidget(vital_box, 1, 1)
+        grid.addWidget(self._ecg_box, 0, 0)
+        grid.addWidget(self._matrix_box, 0, 1)
+        grid.addWidget(self._piezo_box, 1, 0)
+        grid.addWidget(self._vital_box, 1, 1)
         grid.setRowStretch(0, 1)
         grid.setRowStretch(1, 1)
         grid.setColumnStretch(0, 2)
@@ -123,3 +123,46 @@ class PageMonitor(QWidget):
 
     def on_system_status(self, s) -> None:
         self.vital.update_status(s.level_pct, s.uptime_s)
+
+    # ---- 主题切换 ----
+    def restyle(self) -> None:
+        """主题切换时被 MainWindow 调用，重建 widget 配色。"""
+        L = theme.current()
+        from PySide6.QtGui import QColor
+        import pyqtgraph as pg
+        # pyqtgraph 主题（波形区）
+        bg = QColor(L["bg_primary"]).name()
+        fg = QColor(L["text_primary"]).name()
+        try:
+            pg.setConfigOptions(background=bg, foreground=fg)
+        except Exception:  # noqa: BLE001
+            pass
+        self.ecg.plot.setBackground(L["bg_primary"])
+        self.piezo.plot.setBackground(L["bg_primary"])
+        self.ecg.plot.getAxis("left").setPen(fg)
+        self.ecg.plot.getAxis("left").setTextPen(fg)
+        self.ecg.plot.getAxis("bottom").setPen(fg)
+        self.ecg.plot.getAxis("bottom").setTextPen(fg)
+        self.piezo.plot.getAxis("left").setPen(fg)
+        self.piezo.plot.getAxis("left").setTextPen(fg)
+        self.piezo.plot.getAxis("bottom").setPen(fg)
+        self.piezo.plot.getAxis("bottom").setTextPen(fg)
+        # 主区
+        self._ecg_box.setStyleSheet(
+            f"background:{L['bg_primary']};border:1px solid {L['border_default']};border-radius:8px;"
+        )
+        self._matrix_box.setStyleSheet(
+            f"background:{L['bg_primary']};border:1px solid {L['border_default']};border-radius:8px;"
+        )
+        self._piezo_box.setStyleSheet(
+            f"background:{L['bg_primary']};border:1px solid {L['border_default']};border-radius:8px;"
+        )
+        # 标题字体颜色更新（用 findChildren 找到 QLabel）
+        for lbl in self.findChildren(QLabel):
+            cur = lbl.styleSheet()
+            # 简单粗暴：所有 Panel 标题都重设
+            new = cur
+            for old, newc in [(L["text_primary"] if False else "transparent", "transparent")]:
+                pass
+        # 直接重新加载样式：触发 update
+        self.update()

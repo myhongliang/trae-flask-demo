@@ -53,6 +53,8 @@ class SimAdapter(DeviceAdapter):
         self._phase = random.random() * math.pi * 2
         self._press_r = 1.5
         self._press_c = 1.5
+        self._press_strength = 5.0
+        self._boot_time = 0.0  # run() 启动时记录
 
         self._running: bool = False
         self._task: Optional[asyncio.Task] = None
@@ -88,6 +90,7 @@ class SimAdapter(DeviceAdapter):
     async def run(self) -> None:
         """主循环：调度各路数据生成。"""
         self._running = True
+        self._boot_time = time.time()
         self._set_state(LinkState.STREAMING)
 
         # 立即发一帧 DeviceInfo
@@ -204,11 +207,16 @@ class SimAdapter(DeviceAdapter):
         ).encode()
 
     def _encode_status(self) -> bytes:
+        uptime = int(time.time() - self._boot_time) if self._boot_time > 0 else 0
+        # 慢漂移：电量缓慢下降、电压 / 温度微抖动
+        battery = max(20, 95 - uptime // 30)  # 每 30s 掉 1%
+        voltage = 3850 + int(20 * math.sin(self._t * 0.05))
+        temp = 35 + int(2 * math.sin(self._t * 0.1))
         payload = struct.pack(
             "<IBBHHHBI B",
             self._next_seq(),
-            0x01, 86, 3850, 3300, 3300,
-            35, int(time.time()) % (1 << 31), 0,
+            0x01, battery, voltage, 3300, 3300,
+            temp, uptime, 0,
         )
         return Frame(
             type=TYPE_SYS_STATUS,

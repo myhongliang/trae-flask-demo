@@ -58,6 +58,14 @@ class AppController:
         if window.link_ind is not None:
             self._ui_state_cbs.append(window.link_ind.set_state)
             self._ui_session_cbs.append(window.status_badge.set_state)
+        # 把 send_cmd 注入 PageConfig
+        idx = window.get_page_index("参数配置")
+        page = window.pages[idx]
+        if hasattr(page, "set_send_cmd"):
+            async def _send(frame_bytes: bytes) -> None:
+                if self.adapter is not None:
+                    await self.adapter.write(frame_bytes)
+            page.set_send_cmd(_send)
 
     # ---- 异步任务 ----
     async def start(self) -> None:

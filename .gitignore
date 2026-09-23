@@ -23,6 +23,7 @@ Thumbs.db
 
 # 本地协作文档（不同步到仓库）
 GIT_WORKFLOW.md
+PR_BODY.md
 
 # 上位机运行产物
 src/mac_pcq/ui/resources/i18n/*.qm

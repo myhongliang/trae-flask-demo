@@ -47,7 +47,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("多模态采集板上住机 v0.1")
         self.resize(1280, 800)
 
-        L = theme.LIGHT
+        L = theme.current()
         self.setStyleSheet(
             f"QMainWindow{{background:{L['bg_primary']};}}"
             f"QListWidget{{background:{L['bg_secondary']};border:0;outline:0;}}"
@@ -72,6 +72,11 @@ class MainWindow(QMainWindow):
         top_lay.addWidget(self.link_ind)
         self.status_badge = StatusBadge()
         top_lay.addWidget(self.status_badge)
+        theme_btn = QPushButton("◐")
+        theme_btn.setToolTip("切换主题（浅色 / 深色）")
+        theme_btn.setStyleSheet(f"border:0;background:transparent;font-size:18px;padding:0 8px;")
+        theme_btn.clicked.connect(self._toggle_theme)
+        top_lay.addWidget(theme_btn)
         settings_btn = QPushButton("⚙")
         settings_btn.setStyleSheet(f"border:0;background:transparent;font-size:18px;padding:0 8px;")
         top_lay.addWidget(settings_btn)
@@ -183,3 +188,27 @@ class MainWindow(QMainWindow):
             if n == name:
                 return i
         raise KeyError(name)
+
+    # ---- 主题切换 ----
+    def _toggle_theme(self) -> None:
+        new_name = theme.toggle()
+        self._restyle()
+        for p in self.pages:
+            if hasattr(p, "restyle"):
+                p.restyle()
+            elif hasattr(p, "refresh"):
+                p.refresh()
+            else:
+                p.update()
+        self.statusBar().showMessage(f"主题已切换：{new_name}", 1500)
+
+    def _restyle(self) -> None:
+        """重建 MainWindow 顶层的 stylesheet（跟随当前主题）。"""
+        L = theme.current()
+        self.setStyleSheet(
+            f"QMainWindow{{background:{L['bg_primary']};}}"
+            f"QListWidget{{background:{L['bg_secondary']};border:0;outline:0;color:{L['text_primary']};}}"
+            f"QListWidget::item{{padding:12px 16px;color:{L['text_primary']};}}"
+            f"QListWidget::item:selected{{background:{L['brand_primary']};color:white;}}"
+            f"QStatusBar{{background:{L['bg_secondary']};color:{L['text_secondary']};}}"
+        )

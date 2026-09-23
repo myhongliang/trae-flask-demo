@@ -1,4 +1,4 @@
-﻿"""MatrixGrid：4×4 压阻热力图（参见 UI 设计 §6.2 / §8）。
+"""MatrixGrid：4×4 压阻热力图（参见 UI 设计 §6.2 / §8）。
 
 - 单元 60×60px，间距 2px
 - 6 种基色 + 5 档深度（通过线性插值近似）
@@ -82,18 +82,19 @@ class MatrixGrid(QWidget):
     def paintEvent(self, _evt) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        L = theme.current()
         for i in range(16):
             row, col = i // 4, i % 4
             x = col * (self.cell + self.gap)
             y = row * (self.cell + self.gap)
             color = _value_to_color(self._values[i], self.vmin, self.vmax, self.base)
             p.setBrush(QBrush(color))
-            pen_color = QColor(theme.LIGHT["brand_primary"]) if self._hover_idx == i else QColor(theme.LIGHT["border_default"])
+            pen_color = QColor(L["brand_primary"]) if self._hover_idx == i else QColor(L["border_default"])
             pen_w = 2 if self._hover_idx == i else 1
             p.setPen(QPen(pen_color, pen_w))
             p.drawRect(x, y, self.cell, self.cell)
             # 右下角数值
-            p.setPen(QColor(theme.LIGHT["text_primary"]))
+            p.setPen(QColor(L["text_primary"]))
             f = QFont()
             f.setPixelSize(10)
             p.setFont(f)
@@ -101,6 +102,9 @@ class MatrixGrid(QWidget):
             text_rect = QRectF(x + self.cell - 36, y + self.cell - 16, 32, 14)
             p.drawText(text_rect, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, txt)
         p.end()
+
+    def restyle(self) -> None:
+        self.update()
 
     def mouseMoveEvent(self, evt) -> None:
         pos = evt.position() if hasattr(evt, "position") else QPointF(evt.pos())

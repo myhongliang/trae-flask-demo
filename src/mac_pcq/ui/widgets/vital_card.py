@@ -1,9 +1,8 @@
-﻿"""VitalCard：心率 / 呼吸率大字卡片（参见 UI 设计 §6.1.4）。"""
+"""VitalCard：心率 / 呼吸率大字卡片（参见 UI 设计 §6.1.4）。"""
 
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QPainter, QFont, QPen, QBrush
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
 
 from mac_pcq.ui import theme
@@ -14,19 +13,15 @@ class VitalCard(QWidget):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        L = theme.LIGHT
-        self.setStyleSheet(
-            f"background:{L['bg_secondary']};border:1px solid {L['border_default']};"
-            f"border-radius:8px;"
-        )
+        L = theme.current()
         root = QVBoxLayout(self)
         root.setContentsMargins(16, 12, 16, 12)
         root.setSpacing(4)
 
         # HR 行
         hr_row = QHBoxLayout()
-        hr_lbl = QLabel("HR  心率")
-        hr_lbl.setStyleSheet(f"color:{L['text_secondary']};font-size:12px;")
+        self._hr_lbl = QLabel("HR  心率")
+        self._hr_lbl.setStyleSheet(f"color:{L['text_secondary']};font-size:12px;")
         self._hr_val = QLabel("--")
         self._hr_val.setStyleSheet(
             f"color:{L['accent_danger']};font-family:Roboto Mono,monospace;"
@@ -36,7 +31,7 @@ class VitalCard(QWidget):
         self._hr_unit.setStyleSheet(f"color:{L['text_tertiary']};font-size:12px;")
         self._hr_q = QLabel("--")
         self._hr_q.setStyleSheet(f"color:{L['accent_success']};font-size:12px;")
-        hr_row.addWidget(hr_lbl)
+        hr_row.addWidget(self._hr_lbl)
         hr_row.addStretch(1)
         hr_row.addWidget(self._hr_val)
         hr_row.addWidget(self._hr_unit)
@@ -46,8 +41,8 @@ class VitalCard(QWidget):
 
         # RR 行
         rr_row = QHBoxLayout()
-        rr_lbl = QLabel("RR  呼吸率")
-        rr_lbl.setStyleSheet(f"color:{L['text_secondary']};font-size:12px;")
+        self._rr_lbl = QLabel("RR  呼吸率")
+        self._rr_lbl.setStyleSheet(f"color:{L['text_secondary']};font-size:12px;")
         self._rr_val = QLabel("--")
         self._rr_val.setStyleSheet(
             f"color:{L['accent_info']};font-family:Roboto Mono,monospace;"
@@ -55,7 +50,7 @@ class VitalCard(QWidget):
         )
         self._rr_unit = QLabel("bpm")
         self._rr_unit.setStyleSheet(f"color:{L['text_tertiary']};font-size:12px;")
-        rr_row.addWidget(rr_lbl)
+        rr_row.addWidget(self._rr_lbl)
         rr_row.addStretch(1)
         rr_row.addWidget(self._rr_val)
         rr_row.addWidget(self._rr_unit)
@@ -71,6 +66,36 @@ class VitalCard(QWidget):
         bot.addStretch(1)
         bot.addWidget(self._uptime_lbl)
         root.addLayout(bot)
+
+        self._apply_theme()
+
+    def _apply_theme(self) -> None:
+        L = theme.current()
+        self.setStyleSheet(
+            f"background:{L['bg_secondary']};border:1px solid {L['border_default']};"
+            f"border-radius:8px;"
+        )
+
+    def restyle(self) -> None:
+        """主题切换时调用。"""
+        self._apply_theme()
+        # 子 label 重设
+        L = theme.current()
+        self._hr_lbl.setStyleSheet(f"color:{L['text_secondary']};font-size:12px;")
+        self._hr_val.setStyleSheet(
+            f"color:{L['accent_danger']};font-family:Roboto Mono,monospace;"
+            f"font-size:28px;font-weight:700;"
+        )
+        self._hr_unit.setStyleSheet(f"color:{L['text_tertiary']};font-size:12px;")
+        self._hr_q.setStyleSheet(f"color:{L['accent_success']};font-size:12px;")
+        self._rr_lbl.setStyleSheet(f"color:{L['text_secondary']};font-size:12px;")
+        self._rr_val.setStyleSheet(
+            f"color:{L['accent_info']};font-family:Roboto Mono,monospace;"
+            f"font-size:28px;font-weight:700;"
+        )
+        self._rr_unit.setStyleSheet(f"color:{L['text_tertiary']};font-size:12px;")
+        self._bat_lbl.setStyleSheet(f"color:{L['text_secondary']};font-size:12px;")
+        self._uptime_lbl.setStyleSheet(f"color:{L['text_secondary']};font-size:12px;")
 
     def update_vital(self, hr_bpm: int, rr_bpm: int, quality: int) -> None:
         self._hr_val.setText(str(hr_bpm))

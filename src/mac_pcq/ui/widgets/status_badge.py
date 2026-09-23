@@ -1,4 +1,4 @@
-﻿"""StatusBadge：状态徽章（采集/暂停/错误）。"""
+"""StatusBadge：状态徽章（采集/暂停/错误）。"""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ class StatusBadge(QWidget):
         p.end()
 
     def _colors(self) -> tuple[str, str]:
-        L = theme.LIGHT
+        L = theme.current()
         return {
             SessionState.IDLE: (L["bg_secondary"], L["text_secondary"]),
             SessionState.STARTING: (L["accent_warning"], "#FFFFFF"),
@@ -47,6 +47,9 @@ class StatusBadge(QWidget):
             SessionState.STOPPING: (L["accent_warning"], "#FFFFFF"),
             SessionState.ERROR: (L["accent_danger"], "#FFFFFF"),
         }.get(self._state, (L["bg_secondary"], L["text_primary"]))
+
+    def restyle(self) -> None:
+        self.update()
 
     def _label(self) -> str:
         return {

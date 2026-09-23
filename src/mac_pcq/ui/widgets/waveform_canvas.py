@@ -1,4 +1,4 @@
-﻿"""WaveformCanvas：通用波形画布（pyqtgraph）。
+"""WaveformCanvas：通用波形画布（pyqtgraph）。
 
 按 UI 设计 §7：
 - pyqtgraph PlotWidget
@@ -77,10 +77,7 @@ class WaveformCanvas(QWidget):
         self._labels: List[QLabel] = []
         for i in range(channels):
             lbl = QLabel(f"ch{i + 1}")
-            lbl.setStyleSheet(
-                f"color:{theme.CHANNEL_COLORS[i % 4]};font-weight:600;"
-                "padding:2px 6px;border-radius:4px;background:#F5F5F5;"
-            )
+            self._restyle_label(lbl, i, visible=True)
             lbl.setCursor(Qt.CursorShape.PointingHandCursor)
             lbl.mousePressEvent = lambda evt, idx=i: self._toggle_ch(idx)
             self._labels.append(lbl)
@@ -88,6 +85,19 @@ class WaveformCanvas(QWidget):
         self._labels_layout.addStretch(1)
         layout.addLayout(self._labels_layout)
         layout.addWidget(self.plot)
+
+    def _restyle_label(self, lbl: QLabel, idx: int, visible: bool) -> None:
+        L = theme.current()
+        if visible:
+            lbl.setStyleSheet(
+                f"color:{theme.CHANNEL_COLORS[idx % 4]};font-weight:600;"
+                f"padding:2px 6px;border-radius:4px;background:{L['bg_secondary']};"
+            )
+        else:
+            lbl.setStyleSheet(
+                f"color:{L['text_tertiary']};font-weight:400;"
+                f"padding:2px 6px;border-radius:4px;background:{L['border_default']};"
+            )
 
     def push_sample(self, ch_values) -> None:
         """喂入一个采样点（长度=channels）。"""
@@ -112,17 +122,21 @@ class WaveformCanvas(QWidget):
 
     def _toggle_ch(self, idx: int) -> None:
         self._ch_visible[idx] = not self._ch_visible[idx]
-        if self._ch_visible[idx]:
-            self._labels[idx].setStyleSheet(
-                f"color:{theme.CHANNEL_COLORS[idx % 4]};font-weight:600;"
-                "padding:2px 6px;border-radius:4px;background:#F5F5F5;"
-            )
-        else:
-            self._labels[idx].setStyleSheet(
-                "color:#9A9A9A;font-weight:400;"
-                "padding:2px 6px;border-radius:4px;background:#E0E0E0;"
-            )
+        self._restyle_label(self._labels[idx], idx, self._ch_visible[idx])
         self._refresh()
+
+    def restyle(self) -> None:
+        """主题切换时调用。"""
+        L = theme.current()
+        try:
+            import pyqtgraph as pg
+            pg.setConfigOptions(background=L["bg_primary"], foreground=L["text_primary"])
+        except Exception:  # noqa: BLE001
+            pass
+        self.plot.setBackground(L["bg_primary"])
+        for i, lbl in enumerate(self._labels):
+            self._restyle_label(lbl, i, self._ch_visible[i])
+        self.update()
 
     def clear(self) -> None:
         for d in self._ring:

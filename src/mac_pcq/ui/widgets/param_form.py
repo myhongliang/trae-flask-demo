@@ -1,11 +1,11 @@
-﻿"""ParamForm：通用参数表单（参见 UI 设计 §6.7）。"""
+"""ParamForm：通用参数表单（参见 UI 设计 §6.7）。"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Tuple
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QWidget, QFormLayout, QSpinBox, QDoubleSpinBox, QComboBox, QCheckBox,
     QPushButton, QHBoxLayout, QLineEdit, QLabel,

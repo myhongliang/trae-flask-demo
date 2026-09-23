@@ -1,4 +1,4 @@
-﻿"""LinkIndicator：链路状态指示灯（绿/黄/红/灰）。
+"""LinkIndicator：链路状态指示灯（绿/黄/红/灰）。
 
 颜色 Token 见 ui/theme.py LIGHT/DARK。
 """
@@ -17,12 +17,12 @@ class LinkIndicator(QWidget):
     """圆形指示灯 + tooltip。"""
 
     _COLORS = {
-        LinkState.DISCONNECTED: theme.LIGHT["text_tertiary"],
-        LinkState.CONNECTING: theme.LIGHT["accent_warning"],
-        LinkState.CONNECTED: theme.LIGHT["accent_success"],
-        LinkState.STREAMING: theme.LIGHT["accent_success"],
-        LinkState.UPGRADING: theme.LIGHT["accent_info"],
-        LinkState.ERROR: theme.LIGHT["accent_danger"],
+        LinkState.DISCONNECTED: "text_tertiary",
+        LinkState.CONNECTING: "accent_warning",
+        LinkState.CONNECTED: "accent_success",
+        LinkState.STREAMING: "accent_success",
+        LinkState.UPGRADING: "accent_info",
+        LinkState.ERROR: "accent_danger",
     }
     _LABELS = {
         LinkState.DISCONNECTED: "未连接",
@@ -40,6 +40,9 @@ class LinkIndicator(QWidget):
         self.setFixedSize(diameter + 4, diameter + 4)
         self.setToolTip(self._LABELS[self._state])
 
+    def restyle(self) -> None:
+        self.update()
+
     def set_state(self, s: LinkState) -> None:
         self._state = s
         self.setToolTip(self._LABELS.get(s, str(s)))
@@ -48,7 +51,8 @@ class LinkIndicator(QWidget):
     def paintEvent(self, _evt) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        color = QColor(self._COLORS.get(self._state, "#9A9A9A"))
+        key = self._COLORS.get(self._state, "text_tertiary")
+        color = QColor(theme.current()[key])
         p.setBrush(QBrush(color))
         p.setPen(QPen(color.darker(120), 1))
         r = self._diameter / 2
